@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ecological & Cultural Site Inspector | AHCECR309</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -577,6 +579,54 @@
         .status-incomplete {
             background-color: #FFF8E1;
             color: #F57F17;
+        }
+
+        /* Leaflet map styles */
+        #map-container {
+            z-index: 1;
+        }
+
+        .leaflet-container {
+            background-color: var(--bg);
+        }
+
+        .leaflet-control-attribution {
+            background-color: var(--bg) !important;
+            color: var(--text) !important;
+        }
+
+        .leaflet-bar {
+            background-color: var(--bg) !important;
+        }
+
+        .leaflet-bar a {
+            background-color: var(--bg) !important;
+            color: var(--text) !important;
+            border-bottom-color: var(--border) !important;
+        }
+
+        .leaflet-bar a:hover {
+            background-color: var(--bg-secondary) !important;
+        }
+
+        .location-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background-color: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .location-btn:hover {
+            background-color: var(--bg-secondary);
         }
 
         @media (max-width: 768px) {
@@ -1408,17 +1458,27 @@
         <div class="modal" v-if="mapModal.show" @click.self="mapModal.show = false" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
             <div style="background: var(--bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; max-height: 90%;">
                 <h3>Select Site Location</h3>
-                <div style="height: 400px; background-color: var(--bg-secondary); margin: 15px 0; display: flex; align-items: center; justify-content: center;">
-                    <p>Map integration would go here (Google Maps, Leaflet, etc.)</p>
+                <div id="map-container" style="height: 400px; margin: 15px 0; position: relative;">
+                    <button class="location-btn" @click="locateUser">
+                        <span>📍</span> Use My Location
+                    </button>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <button class="btn btn-secondary" @click="mapModal.show = false">Cancel</button>
-                    <button class="btn btn-primary" @click="confirmMapSelection">Confirm Location</button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p>Selected Coordinates: {{ mapModal.lat || '--' }}, {{ mapModal.lng || '--' }}</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" @click="mapModal.show = false">Cancel</button>
+                        <button class="btn btn-primary" @click="confirmMapSelection" :disabled="!mapModal.markerPlaced">Confirm Location</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script>
         const { createApp, ref, computed, onMounted, nextTick } = Vue;
         
@@ -1861,17 +1921,109 @@
                 
                 // Map handling
                 const mapModal = ref({
-                    show: false
+                    show: false,
+                    map: null,
+                    marker: null,
+                    lat: null,
+                    lng: null,
+                    markerPlaced: false
                 });
+                
+                const initMap = () => {
+                    nextTick(() => {
+                        if (mapModal.value.show && !mapModal.value.map) {
+                            // Initialize map centered on Australia
+                            mapModal.value.map = L.map('map-container').setView([-25.2744, 133.7751], 4);
+                            
+                            // Add OpenStreetMap tiles
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            }).addTo(mapModal.value.map);
+                            
+                            // Add click handler for placing marker
+                            mapModal.value.map.on('click', (e) => {
+                                placeMarker(e.latlng);
+                            });
+                            
+                            // If we have existing coordinates, place marker there
+                            if (siteInfo.value.latitude && siteInfo.value.longitude) {
+                                const lat = parseFloat(siteInfo.value.latitude);
+                                const lng = parseFloat(siteInfo.value.longitude);
+                                if (!isNaN(lat) && !isNaN(lng)) {
+                                    mapModal.value.map.setView([lat, lng], 15);
+                                    placeMarker([lat, lng]);
+                                }
+                            }
+                        }
+                    });
+                };
+                
+                const placeMarker = (latlng) => {
+                    if (!mapModal.value.marker) {
+                        mapModal.value.marker = L.marker(latlng).addTo(mapModal.value.map);
+                    } else {
+                        mapModal.value.marker.setLatLng(latlng);
+                    }
+                    
+                    // Update coordinates in modal
+                    if (latlng.lat !== undefined) {
+                        mapModal.value.lat = latlng.lat.toFixed(6);
+                        mapModal.value.lng = latlng.lng.toFixed(6);
+                    } else {
+                        mapModal.value.lat = latlng[0].toFixed(6);
+                        mapModal.value.lng = latlng[1].toFixed(6);
+                    }
+                    
+                    mapModal.value.markerPlaced = true;
+                };
+                
+                const locateUser = () => {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const userLatLng = [position.coords.latitude, position.coords.longitude];
+                                mapModal.value.map.setView(userLatLng, 15);
+                                placeMarker(userLatLng);
+                            },
+                            (error) => {
+                                alert(`Error getting location: ${error.message}`);
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 5000,
+                                maximumAge: 0
+                            }
+                        );
+                    } else {
+                        alert("Geolocation is not supported by this browser.");
+                    }
+                };
                 
                 const openMapModal = () => {
                     mapModal.value.show = true;
+                    initMap();
                 };
                 
                 const confirmMapSelection = () => {
-                    // In a real implementation, this would capture coordinates from the map
-                    siteInfo.value.mapSelected = true;
+                    if (mapModal.value.lat && mapModal.value.lng) {
+                        siteInfo.value.latitude = mapModal.value.lat;
+                        siteInfo.value.longitude = mapModal.value.lng;
+                        siteInfo.value.mapSelected = true;
+                    }
+                    cleanupMap();
                     mapModal.value.show = false;
+                };
+                
+                const cleanupMap = () => {
+                    if (mapModal.value.map) {
+                        mapModal.value.map.off();
+                        mapModal.value.map.remove();
+                        mapModal.value.map = null;
+                        mapModal.value.marker = null;
+                        mapModal.value.lat = null;
+                        mapModal.value.lng = null;
+                        mapModal.value.markerPlaced = false;
+                    }
                 };
                 
                 // Signature handling
@@ -2101,6 +2253,7 @@
                     mapModal,
                     openMapModal,
                     confirmMapSelection,
+                    locateUser,
                     signaturePad,
                     clearSignature,
                     quizAnswers,
