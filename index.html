@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecological & Cultural Site Inspector | AHCECR309</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #FFC107;
+            --secondary-dark: #FFA000;
+            --text: #333333;
+            --text-light: #666666;
+            --bg: #FFFFFF;
+            --bg-secondary: #F5F5F5;
+            --border: #E0E0E0;
+            --error: #F44336;
+            --warning: #FF9800;
+            --info: #2196F3;
+            --success: #4CAF50;
+        }
+
+        [data-theme="dark"] {
+            --primary: #81C784;
+            --primary-dark: #66BB6A;
+            --secondary: #FFD54F;
+            --secondary-dark: #FFCA28;
+            --text: #E0E0E0;
+            --text-light: #B0B0B0;
+            --bg: #121212;
+            --bg-secondary: #1E1E1E;
+            --border: #424242;
+            --error: #E57373;
+            --warning: #FFB74D;
+            --info: #64B5F6;
+            --success: #81C784;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text);
+            background-color: var(--bg);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-toggle {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 5px;
+            display: flex;
+            gap: 5px;
+            margin-left: 15px;
+        }
+
+        .mode-toggle button {
+            border: none;
+            padding: 5px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            background: transparent;
+            color: var(--text-light);
+        }
+
+        .mode-toggle button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+            background-color: var(--bg-secondary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            background-color: var(--border);
+        }
+
+        .tab.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 25px;
+            background-color: var(--bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        h3 {
+            margin: 15px 0 10px;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="email"],
+        input[type="tel"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: inherit;
+            transition: border 0.2s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input {
+            width: auto;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-secondary);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .map-container {
+            height: 300px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+            border: 1px dashed var(--border);
+        }
+
+        .photo-upload {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 15px;
+        }
+
+        .photo-upload:hover {
+            border-color: var(--primary);
+        }
+
+        .photo-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .photo-thumbnail {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .risk-matrix {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin: 20px 0;
+        }
+
+        .risk-cell {
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .risk-cell:hover {
+            transform: scale(1.05);
+        }
+
+        .risk-low {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .risk-medium {
+            background-color: #FFF8E1;
+            color: #F57F17;
+        }
+
+        .risk-high {
+            background-color: #FFEBEE;
+            color: #C62828;
+        }
+
+        .risk-extreme {
+            background-color: #F3E5F5;
+            color: #6A1B9A;
+        }
+
+        .selected-risk {
+            font-weight: bold;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .habitat-condition {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .condition-item {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .condition-item:hover {
+            background-color: var(--border);
+        }
+
+        .condition-item.selected {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .condition-item .icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .report-preview {
+            background-color: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .report-section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .report-section h3 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        .report-table th, .report-table td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .report-table th {
+            background-color: var(--bg-secondary);
+        }
+
+        .signature-pad {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--bg-secondary);
+            color: var(--text);
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background-color: var(--info);
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .quiz-question {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .quiz-options {
+            margin-top: 10px;
+        }
+
+        .quiz-option {
+            margin-bottom: 8px;
+        }
+
+        .quiz-feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .correct {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .incorrect {
+            background-color: #FFEBEE;
+            color: #C62828;
+        }
+
+        .resources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .resource-card {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .resource-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .resource-card h4 {
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .resource-card p {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 5px;
+            background-color: var(--bg-secondary);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 0.3s;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .status-complete {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-incomplete {
+            background-color: #FFF8E1;
+            color: #F57F17;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .habitat-condition {
+                flex-direction: column;
+            }
+
+            .tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+
+            .tab {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+
+        /* Dark mode specific styles */
+        [data-theme="dark"] .risk-low {
+            background-color: #1B5E20;
+            color: #E8F5E9;
+        }
+
+        [data-theme="dark"] .risk-medium {
+            background-color: #FF6F00;
+            color: #FFF8E1;
+        }
+
+        [data-theme="dark"] .risk-high {
+            background-color: #C62828;
+            color: #FFEBEE;
+        }
+
+        [data-theme="dark"] .risk-extreme {
+            background-color: #6A1B9A;
+            color: #F3E5F5;
+        }
+
+        [data-theme="dark"] .report-table th {
+            background-color: #1E1E1E;
+        }
+
+        [data-theme="dark"] .correct {
+            background-color: #1B5E20;
+            color: #E8F5E9;
+        }
+
+        [data-theme="dark"] .incorrect {
+            background-color: #C62828;
+            color: #FFEBEE;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <header>
+                <div class="logo">Ecological & Cultural Site Inspector</div>
+                <div>
+                    <button class="theme-toggle" @click="toggleTheme">
+                        <span v-if="darkMode">☀️ Light Mode</span>
+                        <span v-else>🌙 Dark Mode</span>
+                    </button>
+                    <div class="mode-toggle">
+                        <button :class="{active: learnerMode}" @click="learnerMode = true">Learner</button>
+                        <button :class="{active: !learnerMode}" @click="learnerMode = false">Professional</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="progress-bar">
+                <div class="progress-fill" :style="{width: progress + '%'}"></div>
+            </div>
+
+            <div class="tabs">
+                <div v-for="(tab, index) in tabs" :key="index" 
+                     class="tab" 
+                     :class="{active: activeTab === index}"
+                     @click="activeTab = index">
+                    {{ tab.name }}
+                    <span v-if="tab.complete" class="status-badge status-complete">✓</span>
+                    <span v-else class="status-badge status-incomplete">!</span>
+                </div>
+            </div>
+
+            <!-- Site Information Tab -->
+            <div class="tab-content" :class="{active: activeTab === 0}">
+                <h2>Site Information</h2>
+                
+                <div class="form-group">
+                    <label for="inspection-date">Inspection Date</label>
+                    <input type="date" id="inspection-date" v-model="siteInfo.inspectionDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="site-name">Site Name/Location</label>
+                    <input type="text" id="site-name" v-model="siteInfo.siteName" placeholder="Enter site name or address">
+                </div>
+
+                <div class="form-group">
+                    <label for="site-coords">Site Coordinates (Latitude, Longitude)</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="lat" v-model="siteInfo.latitude" placeholder="Latitude">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="long" v-model="siteInfo.longitude" placeholder="Longitude">
+                        </div>
+                    </div>
+                    <p class="help-text">Example: -33.8688, 151.2093 or use the map below to select location</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Site Map</label>
+                    <div class="map-container">
+                        <span v-if="!siteInfo.mapSelected">Click to select site location on map</span>
+                        <span v-else>Map location selected: {{ siteInfo.latitude }}, {{ siteInfo.longitude }}</span>
+                    </div>
+                    <button class="btn btn-secondary" @click="openMapModal">Open Map Selector</button>
+                </div>
+
+                <h3>Client/Landholder Details</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="client-name">Name</label>
+                        <input type="text" id="client-name" v-model="siteInfo.clientName">
+                    </div>
+                    <div class="form-group">
+                        <label for="client-org">Organization</label>
+                        <input type="text" id="client-org" v-model="siteInfo.clientOrg">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="client-email">Email</label>
+                        <input type="email" id="client-email" v-model="siteInfo.clientEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="client-phone">Phone</label>
+                        <input type="tel" id="client-phone" v-model="siteInfo.clientPhone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="site-description">Site Description</label>
+                    <textarea id="site-description" v-model="siteInfo.siteDescription" placeholder="Brief description of the site including size, general condition, and notable features"></textarea>
+                    <p class="help-text">Include information about access points, terrain, and any existing infrastructure</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Site Photos</label>
+                    <div class="photo-upload" @click="triggerPhotoUpload">
+                        <p>Click to upload photos or drag and drop files here</p>
+                        <input type="file" id="photo-upload" multiple accept="image/*" style="display: none;" @change="handlePhotoUpload">
+                    </div>
+                    <div class="photo-preview">
+                        <img v-for="(photo, index) in siteInfo.photos" :key="index" :src="photo.url" class="photo-thumbnail" @click="viewPhoto(photo)">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="nextTab">Continue to Ecological Assessment</button>
+                </div>
+            </div>
+
+            <!-- Ecological Assessment Tab -->
+            <div class="tab-content" :class="{active: activeTab === 1}">
+                <h2>Ecological Assessment</h2>
+                
+                <div class="form-group">
+                    <label for="veg-community">Vegetation Community/Type</label>
+                    <select id="veg-community" v-model="ecological.vegetationCommunity">
+                        <option value="">Select vegetation community</option>
+                        <option v-for="(community, index) in vegetationCommunities" :key="index" :value="community">{{ community }}</option>
+                    </select>
+                    <p class="help-text">If unsure, refer to local vegetation classification guides</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Threatened Species Present</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(species, index) in threatenedSpecies" :key="index">
+                            <input type="checkbox" :id="'species-'+index" v-model="ecological.threatenedSpecies[species]">
+                            <label :for="'species-'+index">{{ species }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addThreatenedSpecies">Add Custom Species</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Invasive Species/Weeds Present</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(weed, index) in invasiveSpecies" :key="index">
+                            <input type="checkbox" :id="'weed-'+index" v-model="ecological.invasiveSpecies[weed]">
+                            <label :for="'weed-'+index">{{ weed }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addInvasiveSpecies">Add Custom Weed</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Habitat Condition</label>
+                    <div class="habitat-condition">
+                        <div class="condition-item" 
+                             :class="{selected: ecological.habitatCondition === 'excellent'}"
+                             @click="ecological.habitatCondition = 'excellent'">
+                            <div class="icon">🌿</div>
+                            <div>Excellent</div>
+                            <p class="help-text">Minimal disturbance, high biodiversity</p>
+                        </div>
+                        <div class="condition-item" 
+                             :class="{selected: ecological.habitatCondition === 'good'}"
+                             @click="ecological.habitatCondition = 'good'">
+                            <div class="icon">🌱</div>
+                            <div>Good</div>
+                            <p class="help-text">Some disturbance but functioning well</p>
+                        </div>
+                        <div class="condition-item" 
+                             :class="{selected: ecological.habitatCondition === 'fair'}"
+                             @click="ecological.habitatCondition = 'fair'">
+                            <div class="icon">🍂</div>
+                            <div>Fair</div>
+                            <p class="help-text">Moderate disturbance, reduced function</p>
+                        </div>
+                        <div class="condition-item" 
+                             :class="{selected: ecological.habitatCondition === 'poor'}"
+                             @click="ecological.habitatCondition = 'poor'">
+                            <div class="icon">🌵</div>
+                            <div>Poor</div>
+                            <p class="help-text">High disturbance, limited function</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ecological-notes">Ecological Notes</label>
+                    <textarea id="ecological-notes" v-model="ecological.notes" placeholder="Additional observations about flora, fauna, ecological values, and potential impacts"></textarea>
+                    <p class="help-text">Include details about nesting sites, hollow-bearing trees, water sources, etc.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Ecological Photos</label>
+                    <div class="photo-upload" @click="triggerPhotoUpload">
+                        <p>Click to upload photos or drag and drop files here</p>
+                        <input type="file" id="eco-photo-upload" multiple accept="image/*" style="display: none;" @change="handleEcoPhotoUpload">
+                    </div>
+                    <div class="photo-preview">
+                        <img v-for="(photo, index) in ecological.photos" :key="index" :src="photo.url" class="photo-thumbnail" @click="viewPhoto(photo)">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Site Information</button>
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="nextTab">Continue to Cultural Assessment</button>
+                </div>
+            </div>
+
+            <!-- Cultural Assessment Tab -->
+            <div class="tab-content" :class="{active: activeTab === 2}">
+                <h2>Cultural Heritage Assessment</h2>
+                
+                <div class="form-group">
+                    <label>Known Cultural Heritage Features</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(feature, index) in culturalFeatures" :key="index">
+                            <input type="checkbox" :id="'feature-'+index" v-model="cultural.knownFeatures[feature]">
+                            <label :for="'feature-'+index">{{ feature }}</label>
+                            <div class="tooltip">
+                                <span class="info-icon">i</span>
+                                <span class="tooltiptext">{{ getFeatureDescription(feature) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addCulturalFeature">Add Custom Feature</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="cultural-significance">Cultural Significance Assessment</label>
+                    <textarea id="cultural-significance" v-model="cultural.significance" placeholder="Describe the cultural significance of the site"></textarea>
+                    <p class="help-text">Include information from Traditional Owners, historical records, or other sources</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="heritage-register">Heritage Register Check</label>
+                    <select id="heritage-register" v-model="cultural.heritageRegister">
+                        <option value="">Select status</option>
+                        <option value="listed">Listed on heritage register</option>
+                        <option value="potential">Potential heritage significance</option>
+                        <option value="none">No known heritage listing</option>
+                        <option value="unknown">Not checked</option>
+                    </select>
+                    <p class="help-text">Check with local Aboriginal Heritage Office or State Heritage Register</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="cultural-consultation">Consultation with Traditional Owners</label>
+                    <select id="cultural-consultation" v-model="cultural.consultation">
+                        <option value="">Select consultation status</option>
+                        <option value="completed">Consultation completed</option>
+                        <option value="pending">Consultation pending</option>
+                        <option value="required">Consultation required</option>
+                        <option value="not-applicable">Not applicable</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="cultural-notes">Cultural Heritage Notes</label>
+                    <textarea id="cultural-notes" v-model="cultural.notes" placeholder="Additional observations about cultural heritage values and potential impacts"></textarea>
+                    <p class="help-text">Include details about any artifacts, scarred trees, ceremonial sites, etc.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Cultural Heritage Photos</label>
+                    <div class="photo-upload" @click="triggerPhotoUpload">
+                        <p>Click to upload photos or drag and drop files here</p>
+                        <input type="file" id="cultural-photo-upload" multiple accept="image/*" style="display: none;" @change="handleCulturalPhotoUpload">
+                    </div>
+                    <div class="photo-preview">
+                        <img v-for="(photo, index) in cultural.photos" :key="index" :src="photo.url" class="photo-thumbnail" @click="viewPhoto(photo)">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Ecological Assessment</button>
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="nextTab">Continue to Risk Assessment</button>
+                </div>
+            </div>
+
+            <!-- Risk Assessment Tab -->
+            <div class="tab-content" :class="{active: activeTab === 3}">
+                <h2>Site Condition & Risk Assessment</h2>
+                
+                <h3>Site Condition</h3>
+                <div class="form-group">
+                    <label for="soil-condition">Soil Condition</label>
+                    <select id="soil-condition" v-model="riskAssessment.soilCondition">
+                        <option value="">Select soil condition</option>
+                        <option value="excellent">Excellent - stable, well-structured</option>
+                        <option value="good">Good - minor compaction or erosion</option>
+                        <option value="fair">Fair - some compaction or erosion</option>
+                        <option value="poor">Poor - severe compaction or erosion</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="erosion-risk">Erosion Risk</label>
+                    <select id="erosion-risk" v-model="riskAssessment.erosionRisk">
+                        <option value="">Select erosion risk</option>
+                        <option value="low">Low - minimal risk</option>
+                        <option value="moderate">Moderate - some risk</option>
+                        <option value="high">High - significant risk</option>
+                        <option value="extreme">Extreme - immediate risk</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="disturbance-level">Existing Disturbance Level</label>
+                    <select id="disturbance-level" v-model="riskAssessment.disturbanceLevel">
+                        <option value="">Select disturbance level</option>
+                        <option value="minimal">Minimal - pristine/near pristine</option>
+                        <option value="low">Low - minor disturbance</option>
+                        <option value="moderate">Moderate - some clearing or modification</option>
+                        <option value="high">High - significantly modified</option>
+                    </select>
+                </div>
+
+                <h3>Hazards Present</h3>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(hazard, index) in hazards" :key="index">
+                            <input type="checkbox" :id="'hazard-'+index" v-model="riskAssessment.hazards[hazard]">
+                            <label :for="'hazard-'+index">{{ hazard }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addHazard">Add Custom Hazard</button>
+                </div>
+
+                <h3>Risk Assessment Matrix</h3>
+                <p>Select the overall risk level based on likelihood and consequence:</p>
+                <div class="risk-matrix">
+                    <div v-for="(row, rowIndex) in riskMatrix" :key="rowIndex" class="risk-row">
+                        <div v-for="(cell, cellIndex) in row" :key="cellIndex" 
+                             class="risk-cell" 
+                             :class="[cell.class, { 'selected-risk': riskAssessment.riskLevel === cell.value }]"
+                             @click="riskAssessment.riskLevel = cell.value">
+                            {{ cell.label }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="risk-notes">Risk Assessment Notes</label>
+                    <textarea id="risk-notes" v-model="riskAssessment.notes" placeholder="Additional observations about site conditions, hazards, and risks"></textarea>
+                    <p class="help-text">Include details about any immediate risks that need addressing</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Risk Photos</label>
+                    <div class="photo-upload" @click="triggerPhotoUpload">
+                        <p>Click to upload photos or drag and drop files here</p>
+                        <input type="file" id="risk-photo-upload" multiple accept="image/*" style="display: none;" @change="handleRiskPhotoUpload">
+                    </div>
+                    <div class="photo-preview">
+                        <img v-for="(photo, index) in riskAssessment.photos" :key="index" :src="photo.url" class="photo-thumbnail" @click="viewPhoto(photo)">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Cultural Assessment</button>
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="nextTab">Continue to Mitigation</button>
+                </div>
+            </div>
+
+            <!-- Mitigation Actions Tab -->
+            <div class="tab-content" :class="{active: activeTab === 4}">
+                <h2>Recommended Mitigation Actions</h2>
+                
+                <div class="form-group">
+                    <label>Ecological Mitigation Measures</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(measure, index) in ecologicalMitigation" :key="index">
+                            <input type="checkbox" :id="'eco-mit-'+index" v-model="mitigation.ecologicalMeasures[measure]">
+                            <label :for="'eco-mit-'+index">{{ measure }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addEcologicalMitigation">Add Custom Measure</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="ecological-mit-details">Ecological Mitigation Details</label>
+                    <textarea id="ecological-mit-details" v-model="mitigation.ecologicalDetails" placeholder="Specific details about ecological mitigation measures"></textarea>
+                    <p class="help-text">Include timing considerations, methods, and monitoring requirements</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Cultural Heritage Mitigation Measures</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(measure, index) in culturalMitigation" :key="index">
+                            <input type="checkbox" :id="'cul-mit-'+index" v-model="mitigation.culturalMeasures[measure]">
+                            <label :for="'cul-mit-'+index">{{ measure }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addCulturalMitigation">Add Custom Measure</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="cultural-mit-details">Cultural Mitigation Details</label>
+                    <textarea id="cultural-mit-details" v-model="mitigation.culturalDetails" placeholder="Specific details about cultural heritage mitigation measures"></textarea>
+                    <p class="help-text">Include consultation requirements, monitoring, and any necessary permits</p>
+                </div>
+
+                <div class="form-group">
+                    <label>General Site Mitigation Measures</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item" v-for="(measure, index) in generalMitigation" :key="index">
+                            <input type="checkbox" :id="'gen-mit-'+index" v-model="mitigation.generalMeasures[measure]">
+                            <label :for="'gen-mit-'+index">{{ measure }}</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 10px;" @click="addGeneralMitigation">Add Custom Measure</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="general-mit-details">General Mitigation Details</label>
+                    <textarea id="general-mit-details" v-model="mitigation.generalDetails" placeholder="Specific details about general site mitigation measures"></textarea>
+                    <p class="help-text">Include erosion control, access management, and other site-specific measures</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="monitoring-req">Monitoring Requirements</label>
+                    <textarea id="monitoring-req" v-model="mitigation.monitoring" placeholder="Describe any monitoring requirements for the site"></textarea>
+                    <p class="help-text">Include frequency, methods, and responsible parties</p>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Risk Assessment</button>
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="nextTab">Continue to Report</button>
+                </div>
+            </div>
+
+            <!-- Report Generator Tab -->
+            <div class="tab-content" :class="{active: activeTab === 5}">
+                <h2>Report Generator</h2>
+                
+                <div class="form-group">
+                    <label for="inspector-name">Inspector Name</label>
+                    <input type="text" id="inspector-name" v-model="report.inspectorName">
+                </div>
+
+                <div class="form-group">
+                    <label for="inspector-org">Inspector Organization</label>
+                    <input type="text" id="inspector-org" v-model="report.inspectorOrg">
+                </div>
+
+                <div class="form-group">
+                    <label for="inspector-qualifications">Inspector Qualifications</label>
+                    <input type="text" id="inspector-qualifications" v-model="report.inspectorQualifications" placeholder="Relevant qualifications or certifications">
+                </div>
+
+                <div class="form-group">
+                    <label>Inspector Signature</label>
+                    <div class="signature-pad" ref="signaturePad">
+                        <canvas width="400" height="200" style="border: 1px solid var(--border); background-color: var(--bg);"></canvas>
+                    </div>
+                    <button class="btn btn-secondary" @click="clearSignature" style="margin-top: 10px;">Clear Signature</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-notes">Additional Report Notes</label>
+                    <textarea id="report-notes" v-model="report.notes" placeholder="Any additional comments for the report"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Report Options</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="include-photos" v-model="report.includePhotos">
+                            <label for="include-photos">Include photos in report</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="include-details" v-model="report.includeDetails" checked>
+                            <label for="include-details">Include all details</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Report Preview</h3>
+                <div class="report-preview" ref="reportPreview">
+                    <div class="report-header">
+                        <h2>Ecological & Cultural Site Inspection Report</h2>
+                        <p>Prepared for: {{ siteInfo.clientName }} ({{ siteInfo.clientOrg }})</p>
+                        <p>Prepared by: {{ report.inspectorName }} ({{ report.inspectorOrg }})</p>
+                        <p>Inspection Date: {{ formatDate(siteInfo.inspectionDate) }}</p>
+                        <p>Report Date: {{ formatDate(new Date()) }}</p>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>1. Site Information</h3>
+                        <table class="report-table">
+                            <tr>
+                                <td width="30%">Site Name/Location</td>
+                                <td>{{ siteInfo.siteName }}</td>
+                            </tr>
+                            <tr>
+                                <td>Coordinates</td>
+                                <td>{{ siteInfo.latitude }}, {{ siteInfo.longitude }}</td>
+                            </tr>
+                            <tr>
+                                <td>Site Description</td>
+                                <td>{{ siteInfo.siteDescription }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>2. Ecological Assessment</h3>
+                        <table class="report-table">
+                            <tr>
+                                <td width="30%">Vegetation Community</td>
+                                <td>{{ ecological.vegetationCommunity }}</td>
+                            </tr>
+                            <tr>
+                                <td>Threatened Species</td>
+                                <td>
+                                    <ul>
+                                        <li v-for="(present, species) in ecological.threatenedSpecies" v-if="present">{{ species }}</li>
+                                        <li v-if="Object.values(ecological.threatenedSpecies).filter(v => v).length === 0">None observed</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Invasive Species/Weeds</td>
+                                <td>
+                                    <ul>
+                                        <li v-for="(present, weed) in ecological.invasiveSpecies" v-if="present">{{ weed }}</li>
+                                        <li v-if="Object.values(ecological.invasiveSpecies).filter(v => v).length === 0">None observed</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Habitat Condition</td>
+                                <td>{{ ecological.habitatCondition ? ecological.habitatCondition.charAt(0).toUpperCase() + ecological.habitatCondition.slice(1) : 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Ecological Notes</td>
+                                <td>{{ ecological.notes || 'None' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>3. Cultural Heritage Assessment</h3>
+                        <table class="report-table">
+                            <tr>
+                                <td width="30%">Known Cultural Features</td>
+                                <td>
+                                    <ul>
+                                        <li v-for="(present, feature) in cultural.knownFeatures" v-if="present">{{ feature }}</li>
+                                        <li v-if="Object.values(cultural.knownFeatures).filter(v => v).length === 0">None observed</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Heritage Register Status</td>
+                                <td>{{ formatHeritageStatus(cultural.heritageRegister) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Consultation with Traditional Owners</td>
+                                <td>{{ formatConsultationStatus(cultural.consultation) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Cultural Significance</td>
+                                <td>{{ cultural.significance || 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Cultural Notes</td>
+                                <td>{{ cultural.notes || 'None' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>4. Risk Assessment</h3>
+                        <table class="report-table">
+                            <tr>
+                                <td width="30%">Soil Condition</td>
+                                <td>{{ riskAssessment.soilCondition ? riskAssessment.soilCondition.charAt(0).toUpperCase() + riskAssessment.soilCondition.slice(1) : 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Erosion Risk</td>
+                                <td>{{ riskAssessment.erosionRisk ? riskAssessment.erosionRisk.charAt(0).toUpperCase() + riskAssessment.erosionRisk.slice(1) : 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Disturbance Level</td>
+                                <td>{{ riskAssessment.disturbanceLevel ? riskAssessment.disturbanceLevel.charAt(0).toUpperCase() + riskAssessment.disturbanceLevel.slice(1) : 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Hazards Present</td>
+                                <td>
+                                    <ul>
+                                        <li v-for="(present, hazard) in riskAssessment.hazards" v-if="present">{{ hazard }}</li>
+                                        <li v-if="Object.values(riskAssessment.hazards).filter(v => v).length === 0">None observed</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Overall Risk Level</td>
+                                <td>{{ riskAssessment.riskLevel ? riskAssessment.riskLevel.charAt(0).toUpperCase() + riskAssessment.riskLevel.slice(1) : 'Not assessed' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Risk Notes</td>
+                                <td>{{ riskAssessment.notes || 'None' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>5. Recommended Mitigation Actions</h3>
+                        <h4>Ecological Mitigation</h4>
+                        <ul>
+                            <li v-for="(selected, measure) in mitigation.ecologicalMeasures" v-if="selected">{{ measure }}</li>
+                            <li v-if="Object.values(mitigation.ecologicalMeasures).filter(v => v).length === 0">None recommended</li>
+                        </ul>
+                        <p v-if="mitigation.ecologicalDetails">{{ mitigation.ecologicalDetails }}</p>
+
+                        <h4>Cultural Heritage Mitigation</h4>
+                        <ul>
+                            <li v-for="(selected, measure) in mitigation.culturalMeasures" v-if="selected">{{ measure }}</li>
+                            <li v-if="Object.values(mitigation.culturalMeasures).filter(v => v).length === 0">None recommended</li>
+                        </ul>
+                        <p v-if="mitigation.culturalDetails">{{ mitigation.culturalDetails }}</p>
+
+                        <h4>General Site Mitigation</h4>
+                        <ul>
+                            <li v-for="(selected, measure) in mitigation.generalMeasures" v-if="selected">{{ measure }}</li>
+                            <li v-if="Object.values(mitigation.generalMeasures).filter(v => v).length === 0">None recommended</li>
+                        </ul>
+                        <p v-if="mitigation.generalDetails">{{ mitigation.generalDetails }}</p>
+
+                        <h4>Monitoring Requirements</h4>
+                        <p>{{ mitigation.monitoring || 'None specified' }}</p>
+                    </div>
+
+                    <div class="report-section">
+                        <h3>6. Inspector Details</h3>
+                        <table class="report-table">
+                            <tr>
+                                <td width="30%">Inspector Name</td>
+                                <td>{{ report.inspectorName }}</td>
+                            </tr>
+                            <tr>
+                                <td>Organization</td>
+                                <td>{{ report.inspectorOrg }}</td>
+                            </tr>
+                            <tr>
+                                <td>Qualifications</td>
+                                <td>{{ report.inspectorQualifications }}</td>
+                            </tr>
+                            <tr>
+                                <td>Signature</td>
+                                <td><img v-if="report.signatureData" :src="report.signatureData" width="200"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Mitigation</button>
+                    <button class="btn btn-secondary" @click="saveInspection">Save Progress</button>
+                    <button class="btn btn-primary" @click="generatePDF">Generate PDF Report</button>
+                </div>
+            </div>
+
+            <!-- Resources Tab (Bonus) -->
+            <div class="tab-content" :class="{active: activeTab === 6}">
+                <h2>Resources & Learning</h2>
+                
+                <div v-if="learnerMode">
+                    <h3>Quick Quiz</h3>
+                    <div class="quiz-question">
+                        <p>1. What is the first step in conducting an ecological site inspection?</p>
+                        <div class="quiz-options">
+                            <div class="quiz-option">
+                                <input type="radio" name="q1" id="q1a" value="a" v-model="quizAnswers.q1">
+                                <label for="q1a">Identify all plant species present</label>
+                            </div>
+                            <div class="quiz-option">
+                                <input type="radio" name="q1" id="q1b" value="b" v-model="quizAnswers.q1">
+                                <label for="q1b">Assess the site context and access information</label>
+                            </div>
+                            <div class="quiz-option">
+                                <input type="radio" name="q1" id="q1c" value="c" v-model="quizAnswers.q1">
+                                <label for="q1c">Document any cultural heritage features</label>
+                            </div>
+                        </div>
+                        <div class="quiz-feedback" :class="{correct: quizAnswers.q1 === 'b', incorrect: quizAnswers.q1 && quizAnswers.q1 !== 'b'}" v-if="quizAnswers.q1">
+                            <span v-if="quizAnswers.q1 === 'b'">✓ Correct! Understanding the site context is the essential first step.</span>
+                            <span v-else>✗ Incorrect. The first step should always be to assess the site context and access information.</span>
+                        </div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p>2. When assessing cultural heritage, what should you do if you find an artifact?</p>
+                        <div class="quiz-options">
+                            <div class="quiz-option">
+                                <input type="radio" name="q2" id="q2a" value="a" v-model="quizAnswers.q2">
+                                <label for="q2a">Collect it for further analysis</label>
+                            </div>
+                            <div class="quiz-option">
+                                <input type="radio" name="q2" id="q2b" value="b" v-model="quizAnswers.q2">
+                                <label for="q2b">Leave it in place and note its location</label>
+                            </div>
+                            <div class="quiz-option">
+                                <input type="radio" name="q2" id="q2c" value="c" v-model="quizAnswers.q2">
+                                <label for="q2c">Take a photo but don't record the location</label>
+                            </div>
+                        </div>
+                        <div class="quiz-feedback" :class="{correct: quizAnswers.q2 === 'b', incorrect: quizAnswers.q2 && quizAnswers.q2 !== 'b'}" v-if="quizAnswers.q2">
+                            <span v-if="quizAnswers.q2 === 'b'">✓ Correct! Artifacts should be left in place and their location carefully documented.</span>
+                            <span v-else>✗ Incorrect. Artifacts should never be collected without proper authorization and should always have their location recorded.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Reference Materials</h3>
+                <div class="resources-grid">
+                    <div class="resource-card">
+                        <h4>Vegetation Communities Guide</h4>
+                        <p>Common vegetation communities and their characteristics in your region.</p>
+                        <button class="btn btn-secondary" style="width: 100%;">Download Guide</button>
+                    </div>
+                    <div class="resource-card">
+                        <h4>Threatened Species Checklist</h4>
+                        <p>List of threatened flora and fauna species with identification tips.</p>
+                        <button class="btn btn-secondary" style="width: 100%;">Download Checklist</button>
+                    </div>
+                    <div class="resource-card">
+                        <h4>Cultural Heritage Protocols</h4>
+                        <p>Guidelines for identifying and protecting cultural heritage features.</p>
+                        <button class="btn btn-secondary" style="width: 100%;">Download Protocols</button>
+                    </div>
+                    <div class="resource-card">
+                        <h4>Risk Assessment Matrix</h4>
+                        <p>Detailed explanation of the risk assessment process and matrix.</p>
+                        <button class="btn btn-secondary" style="width: 100%;">Download Matrix</button>
+                    </div>
+                </div>
+
+                <h3>Common Species Gallery</h3>
+                <div class="photo-preview">
+                    <img src="https://via.placeholder.com/100?text=Species+1" class="photo-thumbnail">
+                    <img src="https://via.placeholder.com/100?text=Species+2" class="photo-thumbnail">
+                    <img src="https://via.placeholder.com/100?text=Species+3" class="photo-thumbnail">
+                    <img src="https://via.placeholder.com/100?text=Species+4" class="photo-thumbnail">
+                    <img src="https://via.placeholder.com/100?text=Species+5" class="photo-thumbnail">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-secondary" @click="prevTab">Back to Report</button>
+                    <button class="btn btn-primary" @click="finishInspection">Finish Inspection</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Modal -->
+        <div class="modal" v-if="photoModal.show" @click.self="photoModal.show = false" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+            <div style="background: var(--bg); padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%;">
+                <img :src="photoModal.src" style="max-width: 100%; max-height: 80vh;">
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-secondary" @click="photoModal.show = false">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Modal -->
+        <div class="modal" v-if="mapModal.show" @click.self="mapModal.show = false" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+            <div style="background: var(--bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; max-height: 90%;">
+                <h3>Select Site Location</h3>
+                <div style="height: 400px; background-color: var(--bg-secondary); margin: 15px 0; display: flex; align-items: center; justify-content: center;">
+                    <p>Map integration would go here (Google Maps, Leaflet, etc.)</p>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" @click="mapModal.show = false">Cancel</button>
+                    <button class="btn btn-primary" @click="confirmMapSelection">Confirm Location</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+        
+        createApp({
+            setup() {
+                // Theme management
+                const darkMode = ref(false);
+                
+                const toggleTheme = () => {
+                    darkMode.value = !darkMode.value;
+                    document.documentElement.setAttribute('data-theme', darkMode.value ? 'dark' : 'light');
+                    localStorage.setItem('darkMode', darkMode.value);
+                };
+                
+                // Check for saved theme preference
+                onMounted(() => {
+                    const savedMode = localStorage.getItem('darkMode') === 'true';
+                    darkMode.value = savedMode;
+                    document.documentElement.setAttribute('data-theme', darkMode.value ? 'dark' : 'light');
+                });
+                
+                // Learner mode toggle
+                const learnerMode = ref(true);
+                
+                // Tab management
+                const tabs = ref([
+                    { name: 'Site Info', complete: false },
+                    { name: 'Ecological', complete: false },
+                    { name: 'Cultural', complete: false },
+                    { name: 'Risk', complete: false },
+                    { name: 'Mitigation', complete: false },
+                    { name: 'Report', complete: false },
+                    { name: 'Resources', complete: false }
+                ]);
+                
+                const activeTab = ref(0);
+                
+                const prevTab = () => {
+                    if (activeTab.value > 0) activeTab.value--;
+                };
+                
+                const nextTab = () => {
+                    // Mark current tab as complete
+                    tabs.value[activeTab.value].complete = true;
+                    
+                    if (activeTab.value < tabs.value.length - 1) activeTab.value++;
+                };
+                
+                // Calculate progress
+                const progress = computed(() => {
+                    const completeCount = tabs.value.filter(tab => tab.complete).length;
+                    return (completeCount / tabs.value.length) * 100;
+                });
+                
+                // Data models
+                const siteInfo = ref({
+                    inspectionDate: new Date().toISOString().split('T')[0],
+                    siteName: '',
+                    latitude: '',
+                    longitude: '',
+                    mapSelected: false,
+                    clientName: '',
+                    clientOrg: '',
+                    clientEmail: '',
+                    clientPhone: '',
+                    siteDescription: '',
+                    photos: []
+                });
+                
+                const vegetationCommunities = ref([
+                    'Dry Sclerophyll Forest',
+                    'Wet Sclerophyll Forest',
+                    'Rainforest',
+                    'Grassland',
+                    'Heathland',
+                    'Mangrove',
+                    'Saltmarsh',
+                    'Riparian Zone',
+                    'Agricultural Land',
+                    'Urban/Developed Area'
+                ]);
+                
+                const threatenedSpecies = ref([
+                    'Koala (Phascolarctos cinereus)',
+                    'Regent Honeyeater (Anthochaera phrygia)',
+                    'Swift Parrot (Lathamus discolor)',
+                    'Giant Burrowing Frog (Heleioporus australiacus)',
+                    'Eastern Bristlebird (Dasyornis brachypterus)'
+                ]);
+                
+                const invasiveSpecies = ref([
+                    'Lantana (Lantana camara)',
+                    'Bitou Bush (Chrysanthemoides monilifera)',
+                    'African Olive (Olea europaea subsp. cuspidata)',
+                    'Blackberry (Rubus fruticosus agg.)',
+                    'Scotch Broom (Cytisus scoparius)'
+                ]);
+                
+                const ecological = ref({
+                    vegetationCommunity: '',
+                    threatenedSpecies: {},
+                    invasiveSpecies: {},
+                    habitatCondition: '',
+                    notes: '',
+                    photos: []
+                });
+                
+                // Initialize checkboxes
+                onMounted(() => {
+                    threatenedSpecies.value.forEach(species => {
+                        ecological.value.threatenedSpecies[species] = false;
+                    });
+                    
+                    invasiveSpecies.value.forEach(weed => {
+                        ecological.value.invasiveSpecies[weed] = false;
+                    });
+                });
+                
+                const addThreatenedSpecies = () => {
+                    const species = prompt('Enter the name of the threatened species:');
+                    if (species) {
+                        threatenedSpecies.value.push(species);
+                        ecological.value.threatenedSpecies[species] = true;
+                    }
+                };
+                
+                const addInvasiveSpecies = () => {
+                    const weed = prompt('Enter the name of the invasive species/weed:');
+                    if (weed) {
+                        invasiveSpecies.value.push(weed);
+                        ecological.value.invasiveSpecies[weed] = true;
+                    }
+                };
+                
+                const culturalFeatures = ref([
+                    'Aboriginal Artefacts',
+                    'Scarred Trees',
+                    'Middens',
+                    'Rock Engravings',
+                    'Rock Paintings',
+                    'Burial Sites',
+                    'Ceremonial Sites',
+                    'Historic Structures',
+                    'Historic Land Use Features',
+                    'Cultural Landscapes'
+                ]);
+                
+                const getFeatureDescription = (feature) => {
+                    const descriptions = {
+                        'Aboriginal Artefacts': 'Stone tools, grinding stones, or other objects made or modified by Aboriginal people',
+                        'Scarred Trees': 'Trees with bark or wood removed by Aboriginal people for making canoes, shields, or other items',
+                        'Middens': 'Accumulations of shells, bones, and other food remains indicating past Aboriginal occupation',
+                        'Rock Engravings': 'Images or designs carved into rock surfaces',
+                        'Rock Paintings': 'Painted designs or images on rock surfaces, often using ochre',
+                        'Burial Sites': 'Locations where human remains are interred',
+                        'Ceremonial Sites': 'Places used for rituals, ceremonies, or gatherings',
+                        'Historic Structures': 'Buildings, fences, or other structures from the post-contact period',
+                        'Historic Land Use Features': 'Evidence of past land use like old roads, mines, or agricultural features',
+                        'Cultural Landscapes': 'Areas with cultural significance that may include multiple features or natural elements'
+                    };
+                    return descriptions[feature] || 'No description available';
+                };
+                
+                const cultural = ref({
+                    knownFeatures: {},
+                    significance: '',
+                    heritageRegister: '',
+                    consultation: '',
+                    notes: '',
+                    photos: []
+                });
+                
+                // Initialize checkboxes
+                onMounted(() => {
+                    culturalFeatures.value.forEach(feature => {
+                        cultural.value.knownFeatures[feature] = false;
+                    });
+                });
+                
+                const addCulturalFeature = () => {
+                    const feature = prompt('Enter the name of the cultural feature:');
+                    if (feature) {
+                        culturalFeatures.value.push(feature);
+                        cultural.value.knownFeatures[feature] = true;
+                    }
+                };
+                
+                const hazards = ref([
+                    'Unstable Ground',
+                    'Steep Slopes',
+                    'Water Bodies',
+                    'Overhead Power Lines',
+                    'Underground Services',
+                    'Toxic Plants',
+                    'Wildlife Hazards',
+                    'Extreme Weather Risk',
+                    'Remote Location',
+                    'Poor Access'
+                ]);
+                
+                const riskAssessment = ref({
+                    soilCondition: '',
+                    erosionRisk: '',
+                    disturbanceLevel: '',
+                    hazards: {},
+                    riskLevel: '',
+                    notes: '',
+                    photos: []
+                });
+                
+                // Initialize checkboxes
+                onMounted(() => {
+                    hazards.value.forEach(hazard => {
+                        riskAssessment.value.hazards[hazard] = false;
+                    });
+                });
+                
+                const addHazard = () => {
+                    const hazard = prompt('Enter the name of the hazard:');
+                    if (hazard) {
+                        hazards.value.push(hazard);
+                        riskAssessment.value.hazards[hazard] = true;
+                    }
+                };
+                
+                const riskMatrix = ref([
+                    [
+                        { label: 'Low', value: 'low', class: 'risk-low' },
+                        { label: 'Low', value: 'low', class: 'risk-low' },
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'High', value: 'high', class: 'risk-high' }
+                    ],
+                    [
+                        { label: 'Low', value: 'low', class: 'risk-low' },
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'High', value: 'high', class: 'risk-high' }
+                    ],
+                    [
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' }
+                    ],
+                    [
+                        { label: 'Medium', value: 'medium', class: 'risk-medium' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' }
+                    ],
+                    [
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'High', value: 'high', class: 'risk-high' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' },
+                        { label: 'Extreme', value: 'extreme', class: 'risk-extreme' }
+                    ]
+                ]);
+                
+                const ecologicalMitigation = ref([
+                    'Pre-works surveys for threatened species',
+                    'Timing restrictions for sensitive periods',
+                    'Habitat retention areas',
+                    'Nest box installation',
+                    'Weed management prior to works',
+                    'Erosion and sediment controls',
+                    'Noise and vibration mitigation',
+                    'Light pollution reduction',
+                    'Revegetation plan',
+                    'Monitoring program'
+                ]);
+                
+                const culturalMitigation = ref([
+                    'Cultural heritage survey',
+                    'Buffer zones around sensitive areas',
+                    'Aboriginal monitor on site',
+                    'Archaeological test excavation',
+                    'Avoidance of sensitive areas',
+                    'Salvage of artifacts if disturbance unavoidable',
+                    'Recording of heritage features',
+                    'Community consultation',
+                    'Protective fencing',
+                    'Interpretive signage'
+                ]);
+                
+                const generalMitigation = ref([
+                    'Erosion and sediment controls',
+                    'Dust suppression measures',
+                    'Noise reduction strategies',
+                    'Traffic management plan',
+                    'Waste management plan',
+                    'Spill response plan',
+                    'Emergency procedures',
+                    'Site induction for workers',
+                    'Regular site inspections',
+                    'Rehabilitation plan'
+                ]);
+                
+                const mitigation = ref({
+                    ecologicalMeasures: {},
+                    ecologicalDetails: '',
+                    culturalMeasures: {},
+                    culturalDetails: '',
+                    generalMeasures: {},
+                    generalDetails: '',
+                    monitoring: ''
+                });
+                
+                // Initialize checkboxes
+                onMounted(() => {
+                    ecologicalMitigation.value.forEach(measure => {
+                        mitigation.value.ecologicalMeasures[measure] = false;
+                    });
+                    
+                    culturalMitigation.value.forEach(measure => {
+                        mitigation.value.culturalMeasures[measure] = false;
+                    });
+                    
+                    generalMitigation.value.forEach(measure => {
+                        mitigation.value.generalMeasures[measure] = false;
+                    });
+                });
+                
+                const addEcologicalMitigation = () => {
+                    const measure = prompt('Enter the ecological mitigation measure:');
+                    if (measure) {
+                        ecologicalMitigation.value.push(measure);
+                        mitigation.value.ecologicalMeasures[measure] = true;
+                    }
+                };
+                
+                const addCulturalMitigation = () => {
+                    const measure = prompt('Enter the cultural heritage mitigation measure:');
+                    if (measure) {
+                        culturalMitigation.value.push(measure);
+                        mitigation.value.culturalMeasures[measure] = true;
+                    }
+                };
+                
+                const addGeneralMitigation = () => {
+                    const measure = prompt('Enter the general site mitigation measure:');
+                    if (measure) {
+                        generalMitigation.value.push(measure);
+                        mitigation.value.generalMeasures[measure] = true;
+                    }
+                };
+                
+                const report = ref({
+                    inspectorName: '',
+                    inspectorOrg: '',
+                    inspectorQualifications: '',
+                    signatureData: '',
+                    notes: '',
+                    includePhotos: true,
+                    includeDetails: true
+                });
+                
+                // Photo handling
+                const photoModal = ref({
+                    show: false,
+                    src: ''
+                });
+                
+                const viewPhoto = (photo) => {
+                    photoModal.value.src = photo.url;
+                    photoModal.value.show = true;
+                };
+                
+                const triggerPhotoUpload = () => {
+                    document.getElementById('photo-upload').click();
+                };
+                
+                const handlePhotoUpload = (e) => {
+                    const files = e.target.files;
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            siteInfo.value.photos.push({
+                                name: file.name,
+                                url: event.target.result,
+                                date: new Date().toISOString()
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                
+                const handleEcoPhotoUpload = (e) => {
+                    const files = e.target.files;
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            ecological.value.photos.push({
+                                name: file.name,
+                                url: event.target.result,
+                                date: new Date().toISOString()
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                
+                const handleCulturalPhotoUpload = (e) => {
+                    const files = e.target.files;
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            cultural.value.photos.push({
+                                name: file.name,
+                                url: event.target.result,
+                                date: new Date().toISOString()
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                
+                const handleRiskPhotoUpload = (e) => {
+                    const files = e.target.files;
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            riskAssessment.value.photos.push({
+                                name: file.name,
+                                url: event.target.result,
+                                date: new Date().toISOString()
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                
+                // Map handling
+                const mapModal = ref({
+                    show: false
+                });
+                
+                const openMapModal = () => {
+                    mapModal.value.show = true;
+                };
+                
+                const confirmMapSelection = () => {
+                    // In a real implementation, this would capture coordinates from the map
+                    siteInfo.value.mapSelected = true;
+                    mapModal.value.show = false;
+                };
+                
+                // Signature handling
+                const signaturePad = ref(null);
+                let signatureCanvas = null;
+                let signatureCtx = null;
+                let isDrawing = false;
+                
+                onMounted(() => {
+                    nextTick(() => {
+                        if (signaturePad.value) {
+                            signatureCanvas = signaturePad.value.querySelector('canvas');
+                            signatureCtx = signatureCanvas.getContext('2d');
+                            
+                            // Set up signature pad
+                            signatureCanvas.addEventListener('mousedown', startDrawing);
+                            signatureCanvas.addEventListener('mousemove', draw);
+                            signatureCanvas.addEventListener('mouseup', stopDrawing);
+                            signatureCanvas.addEventListener('mouseout', stopDrawing);
+                            
+                            // Touch support for mobile devices
+                            signatureCanvas.addEventListener('touchstart', startDrawing);
+                            signatureCanvas.addEventListener('touchmove', draw);
+                            signatureCanvas.addEventListener('touchend', stopDrawing);
+                        }
+                    });
+                });
+                
+                const startDrawing = (e) => {
+                    isDrawing = true;
+                    draw(e);
+                };
+                
+                const draw = (e) => {
+                    if (!isDrawing) return;
+                    
+                    e.preventDefault();
+                    
+                    const rect = signatureCanvas.getBoundingClientRect();
+                    let clientX, clientY;
+                    
+                    if (e.type === 'mousemove') {
+                        clientX = e.clientX;
+                        clientY = e.clientY;
+                    } else if (e.type === 'touchmove') {
+                        clientX = e.touches[0].clientX;
+                        clientY = e.touches[0].clientY;
+                    }
+                    
+                    const x = clientX - rect.left;
+                    const y = clientY - rect.top;
+                    
+                    signatureCtx.lineWidth = 2;
+                    signatureCtx.lineCap = 'round';
+                    signatureCtx.strokeStyle = darkMode.value ? '#FFFFFF' : '#000000';
+                    
+                    signatureCtx.lineTo(x, y);
+                    signatureCtx.stroke();
+                    signatureCtx.beginPath();
+                    signatureCtx.moveTo(x, y);
+                };
+                
+                const stopDrawing = () => {
+                    isDrawing = false;
+                    signatureCtx.beginPath();
+                    
+                    // Save signature data
+                    report.value.signatureData = signatureCanvas.toDataURL();
+                };
+                
+                const clearSignature = () => {
+                    signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+                    report.value.signatureData = '';
+                };
+                
+                // Quiz handling
+                const quizAnswers = ref({
+                    q1: '',
+                    q2: ''
+                });
+                
+                // Save and load inspection data
+                const saveInspection = () => {
+                    const inspectionData = {
+                        siteInfo: siteInfo.value,
+                        ecological: ecological.value,
+                        cultural: cultural.value,
+                        riskAssessment: riskAssessment.value,
+                        mitigation: mitigation.value,
+                        report: report.value,
+                        tabs: tabs.value,
+                        activeTab: activeTab.value
+                    };
+                    
+                    localStorage.setItem('currentInspection', JSON.stringify(inspectionData));
+                    alert('Inspection progress saved successfully!');
+                };
+                
+                const loadInspection = () => {
+                    const savedData = localStorage.getItem('currentInspection');
+                    if (savedData) {
+                        const inspectionData = JSON.parse(savedData);
+                        
+                        siteInfo.value = inspectionData.siteInfo;
+                        ecological.value = inspectionData.ecological;
+                        cultural.value = inspectionData.cultural;
+                        riskAssessment.value = inspectionData.riskAssessment;
+                        mitigation.value = inspectionData.mitigation;
+                        report.value = inspectionData.report;
+                        tabs.value = inspectionData.tabs;
+                        activeTab.value = inspectionData.activeTab;
+                        
+                        // Re-initialize any empty objects that might have been lost in serialization
+                        if (!ecological.value.threatenedSpecies) ecological.value.threatenedSpecies = {};
+                        if (!ecological.value.invasiveSpecies) ecological.value.invasiveSpecies = {};
+                        if (!cultural.value.knownFeatures) cultural.value.knownFeatures = {};
+                        if (!riskAssessment.value.hazards) riskAssessment.value.hazards = {};
+                        if (!mitigation.value.ecologicalMeasures) mitigation.value.ecologicalMeasures = {};
+                        if (!mitigation.value.culturalMeasures) mitigation.value.culturalMeasures = {};
+                        if (!mitigation.value.generalMeasures) mitigation.value.generalMeasures = {};
+                        
+                        alert('Inspection progress loaded successfully!');
+                    } else {
+                        alert('No saved inspection found.');
+                    }
+                };
+                
+                // Load any saved inspection on startup
+                onMounted(() => {
+                    const shouldLoad = confirm('Would you like to load your last saved inspection?');
+                    if (shouldLoad) {
+                        loadInspection();
+                    }
+                });
+                
+                // Report generation
+                const formatDate = (dateString) => {
+                    if (!dateString) return '';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('en-AU', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                };
+                
+                const formatHeritageStatus = (status) => {
+                    if (!status) return 'Not assessed';
+                    const statusMap = {
+                        'listed': 'Listed on heritage register',
+                        'potential': 'Potential heritage significance',
+                        'none': 'No known heritage listing',
+                        'unknown': 'Not checked'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const formatConsultationStatus = (status) => {
+                    if (!status) return 'Not assessed';
+                    const statusMap = {
+                        'completed': 'Consultation completed',
+                        'pending': 'Consultation pending',
+                        'required': 'Consultation required',
+                        'not-applicable': 'Not applicable'
+                    };
+                    return statusMap[status] || status;
+                };
+                
+                const generatePDF = () => {
+                    // In a real implementation, this would use jsPDF to generate a PDF report
+                    alert('In a full implementation, this would generate a PDF report with all the inspection data.');
+                    
+                    // Example of how you might use jsPDF:
+                    // const { jsPDF } = window.jspdf;
+                    // const doc = new jsPDF();
+                    // doc.text('Ecological & Cultural Site Inspection Report', 10, 10);
+                    // doc.save('site-inspection-report.pdf');
+                };
+                
+                const finishInspection = () => {
+                    if (confirm('Are you ready to finish this inspection? You can save your progress and return later if needed.')) {
+                        // In a real implementation, this might submit the data to a server
+                        alert('Inspection completed successfully! You can now generate your final report.');
+                        activeTab.value = 5; // Go to report tab
+                    }
+                };
+                
+                return {
+                    darkMode,
+                    toggleTheme,
+                    learnerMode,
+                    tabs,
+                    activeTab,
+                    prevTab,
+                    nextTab,
+                    progress,
+                    siteInfo,
+                    vegetationCommunities,
+                    threatenedSpecies,
+                    invasiveSpecies,
+                    ecological,
+                    addThreatenedSpecies,
+                    addInvasiveSpecies,
+                    culturalFeatures,
+                    cultural,
+                    getFeatureDescription,
+                    addCulturalFeature,
+                    hazards,
+                    riskAssessment,
+                    addHazard,
+                    riskMatrix,
+                    ecologicalMitigation,
+                    culturalMitigation,
+                    generalMitigation,
+                    mitigation,
+                    addEcologicalMitigation,
+                    addCulturalMitigation,
+                    addGeneralMitigation,
+                    report,
+                    photoModal,
+                    viewPhoto,
+                    triggerPhotoUpload,
+                    handlePhotoUpload,
+                    handleEcoPhotoUpload,
+                    handleCulturalPhotoUpload,
+                    handleRiskPhotoUpload,
+                    mapModal,
+                    openMapModal,
+                    confirmMapSelection,
+                    signaturePad,
+                    clearSignature,
+                    quizAnswers,
+                    saveInspection,
+                    loadInspection,
+                    formatDate,
+                    formatHeritageStatus,
+                    formatConsultationStatus,
+                    generatePDF,
+                    finishInspection
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
