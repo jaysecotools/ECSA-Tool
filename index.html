@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +11,8 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Add compressor for images -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.min.js"></script>
     <style>
         :root {
             --primary: #4CAF50;
@@ -629,6 +632,117 @@
             background-color: var(--bg-secondary);
         }
 
+        /* PDF Options Styling */
+        .pdf-options {
+            background-color: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .pdf-options h4 {
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .pdf-option-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .pdf-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pdf-option label {
+            margin-bottom: 0;
+        }
+
+        .pdf-quality-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .pdf-quality-selector button {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background-color: var(--bg);
+            cursor: pointer;
+        }
+
+        .pdf-quality-selector button.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary-dark);
+        }
+
+        .pdf-cover-styles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pdf-cover-style {
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pdf-cover-style:hover {
+            border-color: var(--primary);
+        }
+
+        .pdf-cover-style.selected {
+            border-color: var(--primary);
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .pdf-cover-style .preview {
+            width: 100%;
+            height: 60px;
+            margin-bottom: 5px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .pdf-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: var(--bg-secondary);
+            display: none;
+        }
+
+        .pdf-status.active {
+            display: block;
+        }
+
+        .pdf-progress {
+            height: 5px;
+            background-color: var(--border);
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .pdf-progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
         @media (max-width: 768px) {
             .form-row {
                 flex-direction: column;
@@ -648,6 +762,10 @@
             .tab {
                 padding: 8px 15px;
                 font-size: 14px;
+            }
+
+            .pdf-cover-styles {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             }
         }
 
@@ -1152,17 +1270,70 @@
                     <textarea id="report-notes" v-model="report.notes" placeholder="Any additional comments for the report"></textarea>
                 </div>
 
-                <div class="form-group">
-                    <label>Report Options</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
+                <div class="pdf-options">
+                    <h4>PDF Report Options</h4>
+                    
+                    <div class="pdf-option-group">
+                        <div class="pdf-option">
                             <input type="checkbox" id="include-photos" v-model="report.includePhotos">
                             <label for="include-photos">Include photos in report</label>
                         </div>
-                        <div class="checkbox-item">
+                        <div class="pdf-option">
                             <input type="checkbox" id="include-details" v-model="report.includeDetails" checked>
                             <label for="include-details">Include all details</label>
                         </div>
+                        <div class="pdf-option">
+                            <input type="checkbox" id="exclude-empty" v-model="report.excludeEmpty" checked>
+                            <label for="exclude-empty">Exclude empty sections</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Image Quality</label>
+                        <div class="pdf-quality-selector">
+                            <button :class="{active: report.imageQuality === 'low'}" @click="report.imageQuality = 'low'">Low</button>
+                            <button :class="{active: report.imageQuality === 'medium'}" @click="report.imageQuality = 'medium'">Medium</button>
+                            <button :class="{active: report.imageQuality === 'high'}" @click="report.imageQuality = 'high'">High</button>
+                        </div>
+                        <p class="help-text">Higher quality increases file size</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Cover Page Style</label>
+                        <div class="pdf-cover-styles">
+                            <div class="pdf-cover-style" 
+                                 :class="{selected: report.coverStyle === 'standard'}"
+                                 @click="report.coverStyle = 'standard'">
+                                <div class="preview" style="background-color: #4CAF50; opacity: 0.7;"></div>
+                                <div>Standard</div>
+                            </div>
+                            <div class="pdf-cover-style" 
+                                 :class="{selected: report.coverStyle === 'professional'}"
+                                 @click="report.coverStyle = 'professional'">
+                                <div class="preview" style="background-color: #333; opacity: 0.7;"></div>
+                                <div>Professional</div>
+                            </div>
+                            <div class="pdf-cover-style" 
+                                 :class="{selected: report.coverStyle === 'minimal'}"
+                                 @click="report.coverStyle = 'minimal'">
+                                <div class="preview" style="background-color: #f5f5f5; opacity: 0.7;"></div>
+                                <div>Minimal</div>
+                            </div>
+                            <div class="pdf-cover-style" 
+                                 :class="{selected: report.coverStyle === 'custom'}"
+                                 @click="report.coverStyle = 'custom'">
+                                <div class="preview" style="background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); opacity: 0.7;"></div>
+                                <div>Custom</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pdf-status" :class="{active: pdfStatus.active}">
+                    <p v-if="pdfStatus.message">{{ pdfStatus.message }}</p>
+                    <p v-if="pdfStatus.error" style="color: var(--error)">{{ pdfStatus.error }}</p>
+                    <div class="pdf-progress" v-if="pdfStatus.progress > 0">
+                        <div class="pdf-progress-bar" :style="{width: pdfStatus.progress + '%'}"></div>
                     </div>
                 </div>
 
@@ -1837,7 +2008,18 @@
                     signatureData: '',
                     notes: '',
                     includePhotos: true,
-                    includeDetails: true
+                    includeDetails: true,
+                    excludeEmpty: true,
+                    imageQuality: 'medium',
+                    coverStyle: 'standard'
+                });
+                
+                // PDF Generation Status
+                const pdfStatus = ref({
+                    active: false,
+                    message: '',
+                    error: '',
+                    progress: 0
                 });
                 
                 // Photo handling
@@ -2192,15 +2374,801 @@
                     return statusMap[status] || status;
                 };
                 
-                const generatePDF = () => {
-                    // In a real implementation, this would use jsPDF to generate a PDF report
-                    alert('In a full implementation, this would generate a PDF report with all the inspection data.');
-                    
-                    // Example of how you might use jsPDF:
-                    // const { jsPDF } = window.jspdf;
-                    // const doc = new jsPDF();
-                    // doc.text('Ecological & Cultural Site Inspection Report', 10, 10);
-                    // doc.save('site-inspection-report.pdf');
+                // Helper function to compress images
+                const compressImage = async (imageData, quality = 0.7) => {
+                    try {
+                        const options = {
+                            maxSizeMB: 1,
+                            maxWidthOrHeight: 1024,
+                            useWebWorker: true,
+                            initialQuality: quality
+                        };
+                        
+                        const compressedFile = await imageCompression(imageData, options);
+                        return await imageCompression.getDataUrlFromFile(compressedFile);
+                    } catch (error) {
+                        console.error('Image compression error:', error);
+                        return imageData; // Return original if compression fails
+                    }
+                };
+                
+                // Helper function to check if a section has data
+                const sectionHasData = (sectionData) => {
+                    if (typeof sectionData === 'object' && sectionData !== null) {
+                        return Object.values(sectionData).some(value => {
+                            if (typeof value === 'object' && value !== null) {
+                                return Object.values(value).some(v => v);
+                            }
+                            return !!value;
+                        });
+                    }
+                    return !!sectionData;
+                };
+                
+                // Main PDF generation function
+                const generatePDF = async () => {
+                    try {
+                        // Initialize PDF status
+                        pdfStatus.value = {
+                            active: true,
+                            message: 'Preparing report...',
+                            error: '',
+                            progress: 0
+                        };
+                        
+                        // Get the jsPDF library
+                        const { jsPDF } = window.jspdf;
+                        
+                        // Create a new PDF document
+                        const doc = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+                        
+                        // Set document properties
+                        doc.setProperties({
+                            title: `Site Inspection Report - ${siteInfo.value.siteName || 'Unnamed Site'}`,
+                            subject: 'Ecological and Cultural Site Inspection',
+                            author: report.value.inspectorName || 'Unknown Inspector',
+                            keywords: 'ecological, cultural, heritage, inspection, report',
+                            creator: 'Ecological & Cultural Site Inspector'
+                        });
+                        
+                        // Update progress
+                        pdfStatus.value.progress = 5;
+                        pdfStatus.value.message = 'Creating cover page...';
+                        
+                        // Add cover page based on selected style
+                        doc.addPage();
+                        
+                        // Cover page styling based on selected style
+                        let coverBgColor, coverTextColor, coverTitleSize, coverSubtitleSize;
+                        
+                        switch (report.value.coverStyle) {
+                            case 'professional':
+                                coverBgColor = '#333333';
+                                coverTextColor = '#FFFFFF';
+                                coverTitleSize = 24;
+                                coverSubtitleSize = 14;
+                                break;
+                            case 'minimal':
+                                coverBgColor = '#F5F5F5';
+                                coverTextColor = '#333333';
+                                coverTitleSize = 20;
+                                coverSubtitleSize = 12;
+                                break;
+                            case 'custom':
+                                coverBgColor = 'linear-gradient(135deg, #4CAF50 0%, #2196F3 100%)';
+                                coverTextColor = '#FFFFFF';
+                                coverTitleSize = 22;
+                                coverSubtitleSize = 13;
+                                break;
+                            default: // standard
+                                coverBgColor = '#4CAF50';
+                                coverTextColor = '#FFFFFF';
+                                coverTitleSize = 22;
+                                coverSubtitleSize = 13;
+                        }
+                        
+                        // Add cover background
+                        doc.setFillColor(coverBgColor);
+                        doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F');
+                        
+                        // Add cover content
+                        doc.setTextColor(coverTextColor);
+                        doc.setFontSize(coverTitleSize);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('Ecological & Cultural', 105, 80, { align: 'center' });
+                        doc.text('Site Inspection Report', 105, 90, { align: 'center' });
+                        
+                        doc.setFontSize(coverSubtitleSize);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(`Site: ${siteInfo.value.siteName || 'Not specified'}`, 105, 110, { align: 'center' });
+                        doc.text(`Prepared for: ${siteInfo.value.clientName || 'Not specified'}`, 105, 120, { align: 'center' });
+                        doc.text(`Prepared by: ${report.value.inspectorName || 'Not specified'}`, 105, 130, { align: 'center' });
+                        doc.text(`Date: ${formatDate(new Date())}`, 105, 140, { align: 'center' });
+                        
+                        // Add logo or decorative element
+                        doc.setFontSize(10);
+                        doc.text('Ecological & Cultural Site Inspector', 105, 180, { align: 'center' });
+                        
+                        // Add page for table of contents
+                        doc.addPage();
+                        pdfStatus.value.progress = 10;
+                        pdfStatus.value.message = 'Creating table of contents...';
+                        
+                        doc.setTextColor('#000000');
+                        doc.setFontSize(16);
+                        doc.text('Table of Contents', 20, 20);
+                        
+                        doc.setFontSize(12);
+                        let tocY = 30;
+                        const sections = [
+                            '1. Site Information',
+                            '2. Ecological Assessment',
+                            '3. Cultural Heritage Assessment',
+                            '4. Risk Assessment',
+                            '5. Recommended Mitigation Actions',
+                            '6. Inspector Details'
+                        ];
+                        
+                        sections.forEach(section => {
+                            doc.text(section, 20, tocY);
+                            // Add dotted line and page number (will be filled later)
+                            doc.text('............................', 60, tocY);
+                            tocY += 7;
+                        });
+                        
+                        // Start adding content pages
+                        let currentPage = 3; // After cover and TOC
+                        
+                        // Function to add a new page with header
+                        const addContentPage = (title) => {
+                            if (currentPage > 3) {
+                                doc.addPage();
+                            }
+                            
+                            // Add header
+                            doc.setFontSize(10);
+                            doc.setTextColor('#666666');
+                            doc.text(`Ecological & Cultural Site Inspection - ${siteInfo.value.siteName || 'Unnamed Site'}`, 20, 10);
+                            doc.text(`Page ${currentPage}`, 180, 10, { align: 'right' });
+                            
+                            // Add section title
+                            doc.setFontSize(16);
+                            doc.setTextColor('#000000');
+                            doc.text(title, 20, 20);
+                            
+                            currentPage++;
+                            return 25; // Return starting Y position for content
+                        };
+                        
+                        // Function to add a table to the PDF
+                        const addTableToPDF = (headers, data, startY) => {
+                            const tableData = data.map(row => headers.map(header => row[header] || ''));
+                            
+                            doc.autoTable({
+                                head: [headers],
+                                body: tableData,
+                                startY: startY,
+                                margin: { left: 20, right: 20 },
+                                styles: {
+                                    fontSize: 10,
+                                    cellPadding: 4,
+                                    overflow: 'linebreak',
+                                    valign: 'middle'
+                                },
+                                headStyles: {
+                                    fillColor: [76, 175, 80],
+                                    textColor: 255,
+                                    fontStyle: 'bold'
+                                },
+                                alternateRowStyles: {
+                                    fillColor: [245, 245, 245]
+                                },
+                                didDrawPage: (data) => {
+                                    // Check if we need to add a new page
+                                    if (data.cursor.y > doc.internal.pageSize.height - 20) {
+                                        const newY = addContentPage('');
+                                        data.cursor.y = newY;
+                                    }
+                                }
+                            });
+                            
+                            return doc.autoTable.previous.finalY + 10;
+                        };
+                        
+                        // Function to add an image to the PDF
+                        const addImageToPDF = async (imgData, startY, maxWidth = 170, maxHeight = 100) => {
+                            try {
+                                // Compress image based on selected quality
+                                let quality;
+                                switch (report.value.imageQuality) {
+                                    case 'low': quality = 0.5; break;
+                                    case 'high': quality = 0.9; break;
+                                    default: quality = 0.7; // medium
+                                }
+                                
+                                const compressedImg = await compressImage(imgData, quality);
+                                
+                                // Get image dimensions
+                                const img = new Image();
+                                img.src = compressedImg;
+                                
+                                await new Promise((resolve) => {
+                                    img.onload = resolve;
+                                });
+                                
+                                // Calculate dimensions to fit within maxWidth and maxHeight while maintaining aspect ratio
+                                let width = img.width;
+                                let height = img.height;
+                                
+                                if (width > maxWidth) {
+                                    const ratio = maxWidth / width;
+                                    width = maxWidth;
+                                    height = height * ratio;
+                                }
+                                
+                                if (height > maxHeight) {
+                                    const ratio = maxHeight / height;
+                                    height = maxHeight;
+                                    width = width * ratio;
+                                }
+                                
+                                // Check if image will fit on current page
+                                if (startY + height > doc.internal.pageSize.height - 20) {
+                                    startY = addContentPage('');
+                                }
+                                
+                                // Add image to PDF
+                                doc.addImage(compressedImg, 'JPEG', (doc.internal.pageSize.getWidth() - width) / 2, startY, width, height);
+                                
+                                return startY + height + 10;
+                            } catch (error) {
+                                console.error('Error adding image to PDF:', error);
+                                pdfStatus.value.error = 'Failed to add some images to the report';
+                                return startY; // Skip this image but continue with the rest
+                            }
+                        };
+                        
+                        // 1. Site Information
+                        if (!report.value.excludeEmpty || sectionHasData(siteInfo.value)) {
+                            pdfStatus.value.progress = 20;
+                            pdfStatus.value.message = 'Adding site information...';
+                            
+                            let yPos = addContentPage('1. Site Information');
+                            
+                            // Add site info table
+                            const siteInfoData = [
+                                { Field: 'Inspection Date', Value: formatDate(siteInfo.value.inspectionDate) },
+                                { Field: 'Site Name/Location', Value: siteInfo.value.siteName },
+                                { Field: 'Coordinates', Value: `${siteInfo.value.latitude}, ${siteInfo.value.longitude}` },
+                                { Field: 'Client Name', Value: siteInfo.value.clientName },
+                                { Field: 'Client Organization', Value: siteInfo.value.clientOrg },
+                                { Field: 'Client Email', Value: siteInfo.value.clientEmail },
+                                { Field: 'Client Phone', Value: siteInfo.value.clientPhone }
+                            ];
+                            
+                            yPos = addTableToPDF(['Field', 'Value'], siteInfoData, yPos);
+                            
+                            // Add site description
+                            doc.setFontSize(12);
+                            doc.text('Site Description:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const siteDescLines = doc.splitTextToSize(siteInfo.value.siteDescription || 'No description provided', 170);
+                            doc.text(siteDescLines, 20, yPos);
+                            yPos += (siteDescLines.length * 6) + 10;
+                            
+                            // Add photos if enabled and available
+                            if (report.value.includePhotos && siteInfo.value.photos.length > 0) {
+                                doc.setFontSize(12);
+                                doc.text('Site Photos:', 20, yPos);
+                                yPos += 7;
+                                
+                                for (const photo of siteInfo.value.photos) {
+                                    yPos = await addImageToPDF(photo.url, yPos);
+                                    pdfStatus.value.progress = 20 + (60 * 0.1 * (siteInfo.value.photos.indexOf(photo) + 1) / siteInfo.value.photos.length);
+                                }
+                            }
+                        }
+                        
+                        // 2. Ecological Assessment
+                        if (!report.value.excludeEmpty || sectionHasData(ecological.value)) {
+                            pdfStatus.value.progress = 30;
+                            pdfStatus.value.message = 'Adding ecological assessment...';
+                            
+                            let yPos = addContentPage('2. Ecological Assessment');
+                            
+                            // Add ecological assessment table
+                            const ecoData = [
+                                { Field: 'Vegetation Community', Value: ecological.value.vegetationCommunity },
+                                { Field: 'Habitat Condition', Value: ecological.value.habitatCondition ? ecological.value.habitatCondition.charAt(0).toUpperCase() + ecological.value.habitatCondition.slice(1) : 'Not assessed' }
+                            ];
+                            
+                            yPos = addTableToPDF(['Field', 'Value'], ecoData, yPos);
+                            
+                            // Add threatened species
+                            doc.setFontSize(12);
+                            doc.text('Threatened Species Present:', 20, yPos);
+                            yPos += 7;
+                            
+                            const threatenedSpeciesList = Object.entries(ecological.value.threatenedSpecies)
+                                .filter(([_, present]) => present)
+                                .map(([species, _]) => species);
+                                
+                            if (threatenedSpeciesList.length > 0) {
+                                doc.setFontSize(10);
+                                threatenedSpeciesList.forEach(species => {
+                                    doc.text(`• ${species}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None observed', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add invasive species
+                            doc.setFontSize(12);
+                            doc.text('Invasive Species/Weeds Present:', 20, yPos);
+                            yPos += 7;
+                            
+                            const invasiveSpeciesList = Object.entries(ecological.value.invasiveSpecies)
+                                .filter(([_, present]) => present)
+                                .map(([weed, _]) => weed);
+                                
+                            if (invasiveSpeciesList.length > 0) {
+                                doc.setFontSize(10);
+                                invasiveSpeciesList.forEach(weed => {
+                                    doc.text(`• ${weed}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None observed', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add ecological notes
+                            doc.setFontSize(12);
+                            doc.text('Ecological Notes:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const ecoNotesLines = doc.splitTextToSize(ecological.value.notes || 'No notes provided', 170);
+                            doc.text(ecoNotesLines, 20, yPos);
+                            yPos += (ecoNotesLines.length * 6) + 10;
+                            
+                            // Add photos if enabled and available
+                            if (report.value.includePhotos && ecological.value.photos.length > 0) {
+                                doc.setFontSize(12);
+                                doc.text('Ecological Photos:', 20, yPos);
+                                yPos += 7;
+                                
+                                for (const photo of ecological.value.photos) {
+                                    yPos = await addImageToPDF(photo.url, yPos);
+                                    pdfStatus.value.progress = 30 + (60 * 0.2 * (ecological.value.photos.indexOf(photo) + 1) / ecological.value.photos.length);
+                                }
+                            }
+                        }
+                        
+                        // 3. Cultural Heritage Assessment
+                        if (!report.value.excludeEmpty || sectionHasData(cultural.value)) {
+                            pdfStatus.value.progress = 40;
+                            pdfStatus.value.message = 'Adding cultural assessment...';
+                            
+                            let yPos = addContentPage('3. Cultural Heritage Assessment');
+                            
+                            // Add cultural assessment table
+                            const culturalData = [
+                                { Field: 'Heritage Register Status', Value: formatHeritageStatus(cultural.value.heritageRegister) },
+                                { Field: 'Consultation with Traditional Owners', Value: formatConsultationStatus(cultural.value.consultation) }
+                            ];
+                            
+                            yPos = addTableToPDF(['Field', 'Value'], culturalData, yPos);
+                            
+                            // Add known cultural features
+                            doc.setFontSize(12);
+                            doc.text('Known Cultural Features:', 20, yPos);
+                            yPos += 7;
+                            
+                            const culturalFeaturesList = Object.entries(cultural.value.knownFeatures)
+                                .filter(([_, present]) => present)
+                                .map(([feature, _]) => feature);
+                                
+                            if (culturalFeaturesList.length > 0) {
+                                doc.setFontSize(10);
+                                culturalFeaturesList.forEach(feature => {
+                                    doc.text(`• ${feature}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None observed', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add cultural significance
+                            doc.setFontSize(12);
+                            doc.text('Cultural Significance Assessment:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const culturalSigLines = doc.splitTextToSize(cultural.value.significance || 'No significance assessment provided', 170);
+                            doc.text(culturalSigLines, 20, yPos);
+                            yPos += (culturalSigLines.length * 6) + 10;
+                            
+                            // Add cultural notes
+                            doc.setFontSize(12);
+                            doc.text('Cultural Heritage Notes:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const culturalNotesLines = doc.splitTextToSize(cultural.value.notes || 'No notes provided', 170);
+                            doc.text(culturalNotesLines, 20, yPos);
+                            yPos += (culturalNotesLines.length * 6) + 10;
+                            
+                            // Add photos if enabled and available
+                            if (report.value.includePhotos && cultural.value.photos.length > 0) {
+                                doc.setFontSize(12);
+                                doc.text('Cultural Heritage Photos:', 20, yPos);
+                                yPos += 7;
+                                
+                                for (const photo of cultural.value.photos) {
+                                    yPos = await addImageToPDF(photo.url, yPos);
+                                    pdfStatus.value.progress = 40 + (60 * 0.2 * (cultural.value.photos.indexOf(photo) + 1) / cultural.value.photos.length);
+                                }
+                            }
+                        }
+                        
+                        // 4. Risk Assessment
+                        if (!report.value.excludeEmpty || sectionHasData(riskAssessment.value)) {
+                            pdfStatus.value.progress = 50;
+                            pdfStatus.value.message = 'Adding risk assessment...';
+                            
+                            let yPos = addContentPage('4. Risk Assessment');
+                            
+                            // Add risk assessment table
+                            const riskData = [
+                                { Field: 'Soil Condition', Value: riskAssessment.value.soilCondition ? riskAssessment.value.soilCondition.charAt(0).toUpperCase() + riskAssessment.value.soilCondition.slice(1) : 'Not assessed' },
+                                { Field: 'Erosion Risk', Value: riskAssessment.value.erosionRisk ? riskAssessment.value.erosionRisk.charAt(0).toUpperCase() + riskAssessment.value.erosionRisk.slice(1) : 'Not assessed' },
+                                { Field: 'Disturbance Level', Value: riskAssessment.value.disturbanceLevel ? riskAssessment.value.disturbanceLevel.charAt(0).toUpperCase() + riskAssessment.value.disturbanceLevel.slice(1) : 'Not assessed' },
+                                { Field: 'Overall Risk Level', Value: riskAssessment.value.riskLevel ? riskAssessment.value.riskLevel.charAt(0).toUpperCase() + riskAssessment.value.riskLevel.slice(1) : 'Not assessed' }
+                            ];
+                            
+                            yPos = addTableToPDF(['Field', 'Value'], riskData, yPos);
+                            
+                            // Add hazards
+                            doc.setFontSize(12);
+                            doc.text('Hazards Present:', 20, yPos);
+                            yPos += 7;
+                            
+                            const hazardsList = Object.entries(riskAssessment.value.hazards)
+                                .filter(([_, present]) => present)
+                                .map(([hazard, _]) => hazard);
+                                
+                            if (hazardsList.length > 0) {
+                                doc.setFontSize(10);
+                                hazardsList.forEach(hazard => {
+                                    doc.text(`• ${hazard}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None observed', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add risk notes
+                            doc.setFontSize(12);
+                            doc.text('Risk Assessment Notes:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const riskNotesLines = doc.splitTextToSize(riskAssessment.value.notes || 'No notes provided', 170);
+                            doc.text(riskNotesLines, 20, yPos);
+                            yPos += (riskNotesLines.length * 6) + 10;
+                            
+                            // Add photos if enabled and available
+                            if (report.value.includePhotos && riskAssessment.value.photos.length > 0) {
+                                doc.setFontSize(12);
+                                doc.text('Risk Photos:', 20, yPos);
+                                yPos += 7;
+                                
+                                for (const photo of riskAssessment.value.photos) {
+                                    yPos = await addImageToPDF(photo.url, yPos);
+                                    pdfStatus.value.progress = 50 + (60 * 0.2 * (riskAssessment.value.photos.indexOf(photo) + 1) / riskAssessment.value.photos.length);
+                                }
+                            }
+                        }
+                        
+                        // 5. Recommended Mitigation Actions
+                        if (!report.value.excludeEmpty || sectionHasData(mitigation.value)) {
+                            pdfStatus.value.progress = 60;
+                            pdfStatus.value.message = 'Adding mitigation recommendations...';
+                            
+                            let yPos = addContentPage('5. Recommended Mitigation Actions');
+                            
+                            // Add ecological mitigation
+                            doc.setFontSize(12);
+                            doc.text('Ecological Mitigation Measures:', 20, yPos);
+                            yPos += 7;
+                            
+                            const ecoMitigationList = Object.entries(mitigation.value.ecologicalMeasures)
+                                .filter(([_, selected]) => selected)
+                                .map(([measure, _]) => measure);
+                                
+                            if (ecoMitigationList.length > 0) {
+                                doc.setFontSize(10);
+                                ecoMitigationList.forEach(measure => {
+                                    doc.text(`• ${measure}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None recommended', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add ecological mitigation details
+                            if (mitigation.value.ecologicalDetails) {
+                                doc.setFontSize(12);
+                                doc.text('Ecological Mitigation Details:', 20, yPos);
+                                yPos += 7;
+                                
+                                doc.setFontSize(10);
+                                const ecoMitDetailsLines = doc.splitTextToSize(mitigation.value.ecologicalDetails, 170);
+                                doc.text(ecoMitDetailsLines, 20, yPos);
+                                yPos += (ecoMitDetailsLines.length * 6) + 10;
+                            }
+                            
+                            // Add cultural mitigation
+                            doc.setFontSize(12);
+                            doc.text('Cultural Heritage Mitigation Measures:', 20, yPos);
+                            yPos += 7;
+                            
+                            const culturalMitigationList = Object.entries(mitigation.value.culturalMeasures)
+                                .filter(([_, selected]) => selected)
+                                .map(([measure, _]) => measure);
+                                
+                            if (culturalMitigationList.length > 0) {
+                                doc.setFontSize(10);
+                                culturalMitigationList.forEach(measure => {
+                                    doc.text(`• ${measure}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None recommended', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add cultural mitigation details
+                            if (mitigation.value.culturalDetails) {
+                                doc.setFontSize(12);
+                                doc.text('Cultural Mitigation Details:', 20, yPos);
+                                yPos += 7;
+                                
+                                doc.setFontSize(10);
+                                const culturalMitDetailsLines = doc.splitTextToSize(mitigation.value.culturalDetails, 170);
+                                doc.text(culturalMitDetailsLines, 20, yPos);
+                                yPos += (culturalMitDetailsLines.length * 6) + 10;
+                            }
+                            
+                            // Add general mitigation
+                            doc.setFontSize(12);
+                            doc.text('General Site Mitigation Measures:', 20, yPos);
+                            yPos += 7;
+                            
+                            const generalMitigationList = Object.entries(mitigation.value.generalMeasures)
+                                .filter(([_, selected]) => selected)
+                                .map(([measure, _]) => measure);
+                                
+                            if (generalMitigationList.length > 0) {
+                                doc.setFontSize(10);
+                                generalMitigationList.forEach(measure => {
+                                    doc.text(`• ${measure}`, 25, yPos);
+                                    yPos += 6;
+                                });
+                            } else {
+                                doc.setFontSize(10);
+                                doc.text('None recommended', 25, yPos);
+                                yPos += 6;
+                            }
+                            yPos += 5;
+                            
+                            // Add general mitigation details
+                            if (mitigation.value.generalDetails) {
+                                doc.setFontSize(12);
+                                doc.text('General Mitigation Details:', 20, yPos);
+                                yPos += 7;
+                                
+                                doc.setFontSize(10);
+                                const generalMitDetailsLines = doc.splitTextToSize(mitigation.value.generalDetails, 170);
+                                doc.text(generalMitDetailsLines, 20, yPos);
+                                yPos += (generalMitDetailsLines.length * 6) + 10;
+                            }
+                            
+                            // Add monitoring requirements
+                            doc.setFontSize(12);
+                            doc.text('Monitoring Requirements:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const monitoringLines = doc.splitTextToSize(mitigation.value.monitoring || 'None specified', 170);
+                            doc.text(monitoringLines, 20, yPos);
+                            yPos += (monitoringLines.length * 6) + 10;
+                        }
+                        
+                        // 6. Inspector Details
+                        pdfStatus.value.progress = 80;
+                        pdfStatus.value.message = 'Adding inspector details...';
+                        
+                        let yPos = addContentPage('6. Inspector Details');
+                        
+                        // Add inspector details table
+                        const inspectorData = [
+                            { Field: 'Inspector Name', Value: report.value.inspectorName },
+                            { Field: 'Organization', Value: report.value.inspectorOrg },
+                            { Field: 'Qualifications', Value: report.value.inspectorQualifications }
+                        ];
+                        
+                        yPos = addTableToPDF(['Field', 'Value'], inspectorData, yPos);
+                        
+                        // Add signature if available
+                        if (report.value.signatureData) {
+                            doc.setFontSize(12);
+                            doc.text('Inspector Signature:', 20, yPos);
+                            yPos += 7;
+                            
+                            const img = new Image();
+                            img.src = report.value.signatureData;
+                            
+                            await new Promise((resolve) => {
+                                img.onload = resolve;
+                            });
+                            
+                            // Calculate dimensions to fit within maxWidth while maintaining aspect ratio
+                            const maxWidth = 100;
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            if (width > maxWidth) {
+                                const ratio = maxWidth / width;
+                                width = maxWidth;
+                                height = height * ratio;
+                            }
+                            
+                            // Add signature to PDF
+                            doc.addImage(report.value.signatureData, 'PNG', 20, yPos, width, height);
+                            yPos += height + 10;
+                        }
+                        
+                        // Add report notes if available
+                        if (report.value.notes) {
+                            doc.setFontSize(12);
+                            doc.text('Additional Report Notes:', 20, yPos);
+                            yPos += 7;
+                            
+                            doc.setFontSize(10);
+                            const reportNotesLines = doc.splitTextToSize(report.value.notes, 170);
+                            doc.text(reportNotesLines, 20, yPos);
+                            yPos += (reportNotesLines.length * 6) + 10;
+                        }
+                        
+                        // Update table of contents with page numbers
+                        pdfStatus.value.progress = 90;
+                        pdfStatus.value.message = 'Finalizing report...';
+                        
+                        // Go back to the TOC page and add page numbers
+                        doc.setPage(2);
+                        
+                        let tocPageNumbers = [3]; // Page numbers for each section
+                        let currentPageNum = 3;
+                        
+                        // Calculate page numbers for each section
+                        if (!report.value.excludeEmpty || sectionHasData(siteInfo.value)) {
+                            currentPageNum += 1; // Site info starts on next page
+                            tocPageNumbers.push(currentPageNum);
+                            
+                            // Estimate additional pages for site info (1 base + photos)
+                            const photoPages = report.value.includePhotos ? Math.ceil(siteInfo.value.photos.length / 2) : 0;
+                            currentPageNum += 1 + photoPages;
+                        } else {
+                            tocPageNumbers.push(currentPageNum);
+                        }
+                        
+                        if (!report.value.excludeEmpty || sectionHasData(ecological.value)) {
+                            currentPageNum += 1;
+                            tocPageNumbers.push(currentPageNum);
+                            
+                            const photoPages = report.value.includePhotos ? Math.ceil(ecological.value.photos.length / 2) : 0;
+                            currentPageNum += 1 + photoPages;
+                        } else {
+                            tocPageNumbers.push(currentPageNum);
+                        }
+                        
+                        if (!report.value.excludeEmpty || sectionHasData(cultural.value)) {
+                            currentPageNum += 1;
+                            tocPageNumbers.push(currentPageNum);
+                            
+                            const photoPages = report.value.includePhotos ? Math.ceil(cultural.value.photos.length / 2) : 0;
+                            currentPageNum += 1 + photoPages;
+                        } else {
+                            tocPageNumbers.push(currentPageNum);
+                        }
+                        
+                        if (!report.value.excludeEmpty || sectionHasData(riskAssessment.value)) {
+                            currentPageNum += 1;
+                            tocPageNumbers.push(currentPageNum);
+                            
+                            const photoPages = report.value.includePhotos ? Math.ceil(riskAssessment.value.photos.length / 2) : 0;
+                            currentPageNum += 1 + photoPages;
+                        } else {
+                            tocPageNumbers.push(currentPageNum);
+                        }
+                        
+                        if (!report.value.excludeEmpty || sectionHasData(mitigation.value)) {
+                            currentPageNum += 1;
+                            tocPageNumbers.push(currentPageNum);
+                        } else {
+                            tocPageNumbers.push(currentPageNum);
+                        }
+                        
+                        // Add the page numbers to the TOC
+                        doc.setFontSize(12);
+                        doc.setTextColor('#000000');
+                        
+                        let tocYPos = 30;
+                        for (let i = 0; i < tocPageNumbers.length; i++) {
+                            doc.text(tocPageNumbers[i].toString(), 180, tocYPos, { align: 'right' });
+                            tocYPos += 7;
+                        }
+                        
+                        // Add footer to all pages except cover
+                        const pageCount = doc.internal.getNumberOfPages();
+                        
+                        for (let i = 2; i <= pageCount; i++) {
+                            doc.setPage(i);
+                            
+                            // Footer line
+                            doc.setDrawColor(200, 200, 200);
+                            doc.line(20, 280, 190, 280);
+                            
+                            // Footer text
+                            doc.setFontSize(8);
+                            doc.setTextColor(100, 100, 100);
+                            doc.text(`Generated on ${new Date().toLocaleString()}`, 20, 285);
+                            doc.text('Confidential - For client use only', 105, 285, { align: 'center' });
+                            doc.text(`Page ${i} of ${pageCount}`, 190, 285, { align: 'right' });
+                        }
+                        
+                        // Save the PDF
+                        pdfStatus.value.progress = 100;
+                        pdfStatus.value.message = 'Report generated successfully!';
+                        
+                        const fileName = `SiteInspectionReport_${siteInfo.value.siteName || 'UnnamedSite'}_${new Date().toISOString().split('T')[0]}.pdf`;
+                        doc.save(fileName);
+                        
+                        // Reset status after a delay
+                        setTimeout(() => {
+                            pdfStatus.value.active = false;
+                        }, 3000);
+                        
+                    } catch (error) {
+                        console.error('Error generating PDF:', error);
+                        pdfStatus.value.error = 'An error occurred while generating the PDF. Please try again.';
+                        pdfStatus.value.progress = 0;
+                    }
                 };
                 
                 const finishInspection = () => {
@@ -2243,6 +3211,7 @@
                     addCulturalMitigation,
                     addGeneralMitigation,
                     report,
+                    pdfStatus,
                     photoModal,
                     viewPhoto,
                     triggerPhotoUpload,
@@ -2269,4 +3238,4 @@
         }).mount('#app');
     </script>
 </body>
-</html>
+                                        </html>
